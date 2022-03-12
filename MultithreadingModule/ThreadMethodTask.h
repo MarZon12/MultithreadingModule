@@ -40,82 +40,85 @@ public:
 	ThreadMethodTask(Class* Object, std::function<void(Class&, const float& DeltaTime)> NewTickMethod, std::function<void(Class&)> NewCallbackMethod) :
 		ThreadTask(true, TaskRepeatability::EveryTick, false), TickMethod(NewTickMethod), CallbackMethod(NewCallbackMethod), Obj(Object) {}
 
-	void Execute(const float& DeltaTime) override {
-		std::lock_guard<std::mutex> LockFunction(MethodMutex);
-		std::lock_guard<std::mutex> LockCallback(CallbackMethodMutex);
-
-		if (GetExecuteOnDedicatedThread())
-		{
-			if (!DedicatedMethod)
-			{
-				return;
-			}
-
-			if (GetNeedCallback())
-			{
-				if (!CallbackMethod)
-				{
-					return;
-				}
-			}
-
-			DedicatedMethod(*Obj, ExecutionStopSignal);
-
-			if (GetNeedCallback())
-			{
-				CallbackMethod(*Obj);
-			}
-
-			return;
-		}
-
-		if (GetRepeatability() == TaskRepeatability::Once)
-		{
-			if (!Method)
-			{
-				return;
-			}
-
-			if (GetNeedCallback())
-			{
-				if (!CallbackMethod)
-				{
-					return;
-				}
-			}
-
-			Method(*Obj);
-
-			if (GetNeedCallback())
-			{
-				CallbackMethod(*Obj);
-			}
-
-			return;
-		}
-
-		if (GetRepeatability() == TaskRepeatability::EveryTick)
-		{
-			if (!TickMethod)
-			{
-				return;
-			}
-
-			if (GetNeedCallback())
-			{
-				if (!CallbackMethod)
-				{
-					return;
-				}
-			}
-
-			TickMethod(*Obj, DeltaTime);
-
-			if (GetNeedCallback())
-			{
-				CallbackMethod(*Obj);
-			}
-		}
-	};
+	void Execute(const float& DeltaTime) override;
 };
 
+template<typename Class>
+inline void ThreadMethodTask<Class>::Execute(const float& DeltaTime)
+{
+	std::lock_guard<std::mutex> LockFunction(MethodMutex);
+	std::lock_guard<std::mutex> LockCallback(CallbackMethodMutex);
+
+	if (GetExecuteOnDedicatedThread())
+	{
+		if (!DedicatedMethod)
+		{
+			return;
+		}
+
+		if (GetNeedCallback())
+		{
+			if (!CallbackMethod)
+			{
+				return;
+			}
+		}
+
+		DedicatedMethod(*Obj, ExecutionStopSignal);
+
+		if (GetNeedCallback())
+		{
+			CallbackMethod(*Obj);
+		}
+
+		return;
+	}
+
+	if (GetRepeatability() == TaskRepeatability::Once)
+	{
+		if (!Method)
+		{
+			return;
+		}
+
+		if (GetNeedCallback())
+		{
+			if (!CallbackMethod)
+			{
+				return;
+			}
+		}
+
+		Method(*Obj);
+
+		if (GetNeedCallback())
+		{
+			CallbackMethod(*Obj);
+		}
+
+		return;
+	}
+
+	if (GetRepeatability() == TaskRepeatability::EveryTick)
+	{
+		if (!TickMethod)
+		{
+			return;
+		}
+
+		if (GetNeedCallback())
+		{
+			if (!CallbackMethod)
+			{
+				return;
+			}
+		}
+
+		TickMethod(*Obj, DeltaTime);
+
+		if (GetNeedCallback())
+		{
+			CallbackMethod(*Obj);
+		}
+	}
+}

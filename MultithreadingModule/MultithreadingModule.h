@@ -17,25 +17,8 @@ private:
 	static unsigned int GetRefCounterValue();
 
 public:
-	MultithreadingModule() {
-		IncreaseRefCounter();
-
-		std::lock_guard<std::mutex> Lock(MultithreadingManagerRefMutex);
-		if (MultithreadingManagerRef == nullptr)
-		{
-			MultithreadingManagerRef = new MultithreadingManager();
-		}
-	}
-	~MultithreadingModule() {
-		DecreaseRefCounter();
-
-		std::lock_guard<std::mutex> Lock(MultithreadingManagerRefMutex);
-		if (GetRefCounterValue() == 0)
-		{
-			delete MultithreadingManagerRef;
-			MultithreadingManagerRef = nullptr;
-		}
-	}
+	MultithreadingModule();
+	~MultithreadingModule();
 
 	void* operator new(std::size_t count) = delete;
 	void* operator new[](std::size_t count) = delete;
@@ -60,8 +43,8 @@ public:
 	
 	// Changes the number of running standard threads, stopping or starting them, bringing their number to the given number 
 	// Will not exceed the maximum number of standart threads limit
-	// @param NewNumOfStandartThreads - Updated number of working standart threads
-	void ChangeNumOfRunningThreads(unsigned int NewNumOfStandartThreads);
+	// @param NewNumOfStandardThreads - Updated number of working standart threads
+	void ChangeNumOfRunningThreads(unsigned int NewNumOfStandardThreads);
 
 	// Returns the states of standard threads
 	std::vector<ThreadState> GetThreadsStates();

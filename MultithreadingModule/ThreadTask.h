@@ -31,23 +31,12 @@ public:
 
 	virtual void Execute(const float& DeltaTime) = 0;
 
-	virtual void StopDedicatedExecution() final {
-		ExecutionStopSignal.SetState(true);
-	}
+	virtual void StopDedicatedExecution() final;
 
 	
-	virtual bool GetNeedCallback() final {
-		std::lock_guard<std::mutex> Lock(NeedCallbackMutex);
-		return bNeedCallback;
-	}
+	virtual bool GetNeedCallback() final;
 
-	virtual TaskRepeatability GetRepeatability() final {
-		std::lock_guard<std::mutex> Lock(RepeatabilityMutex);
-		return Repeatability;
-	}
+	virtual TaskRepeatability GetRepeatability() final;
 
-	virtual bool GetExecuteOnDedicatedThread() final {
-		std::lock_guard<std::mutex> Lock(ExecuteOnDedicatedThreadMutex);
-		return bExecuteOnDedicatedThread;
-	};
+	virtual bool GetExecuteOnDedicatedThread() final;
 };

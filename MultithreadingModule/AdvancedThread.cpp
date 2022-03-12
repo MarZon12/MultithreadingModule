@@ -7,15 +7,15 @@ std::mutex AdvancedThread::MaxOnceTasksPerIterationMutex;
 
 AdvancedThread::AdvancedThread() :
     ControlledThread(nullptr),
-    CanBeDestroyed(true),
-    IsDedicatedThread(false),
+    bCanBeDestroyed(true),
+    bIsDedicatedThread(false),
     TaskForDedicatedExecution(nullptr),
-    MustStop(false), MustSleep(false),
+    bMustStop(false), bMustSleep(false),
     State(ThreadState::NotReadyToStart),
-    ThreadCompletedTick(false),
+    bThreadCompletedTick(false),
     OnceTasksRef(nullptr), OnceTasksMutexRef(nullptr),
     TickTasksRef(nullptr), TickTasksMutexRef(nullptr),
-    ThreadCompletedTickTasksRef(nullptr), ThreadCompletedTickTasksMutexRef(nullptr), ThreadCompletedTickTasksConditionRef(nullptr),
+    bThreadCompletedTickTasksRef(nullptr), ThreadCompletedTickTasksMutexRef(nullptr), ThreadCompletedTickTasksConditionRef(nullptr),
     DeltaTickRef(nullptr), DeltaTickMutexRef(nullptr) {}
 
 AdvancedThread::~AdvancedThread()
@@ -25,7 +25,7 @@ AdvancedThread::~AdvancedThread()
 
 void AdvancedThread::Initialize(std::queue<ThreadTask*>* OnceTasks, std::mutex* OnceTasksMutex,
     std::queue<ThreadTask*>* TickTasks, std::mutex* TickTasksMutex,
-    bool* ThreadCompletedTickTasks, std::mutex* ThreadCompletedTickTasksMutex, std::condition_variable* ThreadCompletedTickTasksCondition,
+    bool* bThreadCompletedTickTasks, std::mutex* ThreadCompletedTickTasksMutex, std::condition_variable* ThreadCompletedTickTasksCondition,
     float* DeltaTick, std::mutex* DeltaTickMutex)
 {
     // If the thread is running, then we forbid initialization
@@ -42,7 +42,7 @@ void AdvancedThread::Initialize(std::queue<ThreadTask*>* OnceTasks, std::mutex* 
     {
         return;
     }
-    if (ThreadCompletedTickTasks == nullptr || ThreadCompletedTickTasksMutex == nullptr || ThreadCompletedTickTasksCondition == nullptr)
+    if (bThreadCompletedTickTasks == nullptr || ThreadCompletedTickTasksMutex == nullptr || ThreadCompletedTickTasksCondition == nullptr)
     {
         return;
     }
@@ -64,7 +64,7 @@ void AdvancedThread::Initialize(std::queue<ThreadTask*>* OnceTasks, std::mutex* 
     TickTasksRef = TickTasks;
     TickTasksMutexRef = TickTasksMutex;
     
-    ThreadCompletedTickTasksRef = ThreadCompletedTickTasks;
+    bThreadCompletedTickTasksRef = bThreadCompletedTickTasks;
     ThreadCompletedTickTasksMutexRef = ThreadCompletedTickTasksMutex;
     ThreadCompletedTickTasksConditionRef = ThreadCompletedTickTasksCondition;
 
@@ -111,7 +111,7 @@ ThreadState AdvancedThread::GetState()
 bool AdvancedThread::IsDedicated()
 {
     std::lock_guard<std::mutex> Lock(IsDedicatedThreadMutex);
-    return IsDedicatedThread;
+    return bIsDedicatedThread;
 }
 
 
@@ -137,7 +137,7 @@ void AdvancedThread::Start()
 void AdvancedThread::Stop()
 {
     std::lock_guard<std::mutex> Lock(MustStopMutex);
-    MustStop = true;
+    bMustStop = true;
 
     if (IsDedicated())
     {
@@ -180,13 +180,13 @@ void AdvancedThread::StopWithWaiting()
 void AdvancedThread::Sleep()
 {
     std::lock_guard<std::mutex> Lock(MustSleepMutex);
-    MustSleep = true;
+    bMustSleep = true;
 }
 
 void AdvancedThread::WakeUp()
 {
     MustSleepMutex.lock();
-    MustSleep = false;
+    bMustSleep = false;
     MustSleepMutex.unlock();
 
     MustSleepCondition.notify_all();
@@ -196,7 +196,7 @@ void AdvancedThread::SleepExecution()
 {
     std::unique_lock<std::mutex> LockMustSleep(MustSleepMutex);
 
-    while (MustSleep)
+    while (bMustSleep)
     {
         // We are waiting for a signal about the need to complete tasks, from time to time we wake up for independent checks
         MustSleepCondition.wait_for(LockMustSleep, std::chrono::milliseconds(5));
@@ -239,7 +239,7 @@ unsigned int AdvancedThread::GetMaxOnceTasksPerIteration()
 bool AdvancedThread::GetThreadCompletedTick()
 {
     std::unique_lock<std::mutex> Lock(ThreadCompletedTickMutex);
-    return ThreadCompletedTick;
+    return bThreadCompletedTick;
 }
 
 void AdvancedThread::NotifyTickTaskAvailable()
@@ -256,22 +256,22 @@ void AdvancedThread::SetState(ThreadState NewState)
     State = NewState;
 }
 
-void AdvancedThread::SetIsDedicated(bool NewState)
+void AdvancedThread::SetIsDedicated(bool bNewState)
 {
     std::lock_guard<std::mutex> Lock(IsDedicatedThreadMutex);
-    IsDedicatedThread = NewState;
+    bIsDedicatedThread = bNewState;
 }
 
 bool AdvancedThread::GetMustStop()
 {
     std::lock_guard<std::mutex> Lock(MustStopMutex);
-    return MustStop;
+    return bMustStop;
 }
 
 bool AdvancedThread::GetMustSleep()
 {
     std::lock_guard<std::mutex> Lock(MustSleepMutex);
-    return MustSleep;
+    return bMustSleep;
 }
 
 
@@ -447,11 +447,11 @@ void AdvancedThread::Deinitialize()
     }
 
     MustStopMutex.lock();
-    MustStop = false;
+    bMustStop = false;
     MustStopMutex.unlock();
 
     MustSleepMutex.lock();
-    MustSleep = false;
+    bMustSleep = false;
     MustSleepMutex.unlock();
 
     if (IsDedicated())
@@ -473,7 +473,7 @@ void AdvancedThread::Deinitialize()
         TickTasksRef = nullptr;
         TickTasksMutexRef = nullptr;
 
-        ThreadCompletedTickTasksRef = nullptr;
+        bThreadCompletedTickTasksRef = nullptr;
         ThreadCompletedTickTasksMutexRef = nullptr;
         ThreadCompletedTickTasksConditionRef = nullptr;
 
@@ -484,22 +484,22 @@ void AdvancedThread::Deinitialize()
     SetState(ThreadState::NotReadyToStart);
 }
 
-void AdvancedThread::SetCanBeDestroyed(bool NewState)
+void AdvancedThread::SetCanBeDestroyed(bool bNewState)
 {
     std::lock_guard<std::mutex> Lock(CanBeDestroyedMutex);
-    CanBeDestroyed = NewState;
+    bCanBeDestroyed = bNewState;
 }
 
 bool AdvancedThread::GetCanBeDestroyed()
 {
     std::lock_guard<std::mutex> Lock(CanBeDestroyedMutex);
-    return CanBeDestroyed;
+    return bCanBeDestroyed;
 }
 
-void AdvancedThread::SetThreadCompletedTick(bool NewState)
+void AdvancedThread::SetThreadCompletedTick(bool bNewState)
 {
     std::lock_guard<std::mutex> Lock(ThreadCompletedTickMutex);
-    ThreadCompletedTick = NewState;
+    bThreadCompletedTick = bNewState;
 }
 
 
@@ -514,7 +514,7 @@ void AdvancedThread::NotifyManagerThreadCompletedTickTasks()
 {
     {
         std::lock_guard<std::mutex> Lock(*ThreadCompletedTickTasksMutexRef);
-        *ThreadCompletedTickTasksRef = true;
+        *bThreadCompletedTickTasksRef = true;
     }
 
     ThreadCompletedTickTasksConditionRef->notify_all();

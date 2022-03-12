@@ -1,18 +1,18 @@
 #include "TaskStopSignal.h"
 
-TaskStopSignal::TaskStopSignal() : State(false)
+TaskStopSignal::TaskStopSignal() : bState(false)
 {
 }
 
-void TaskStopSignal::SetState(bool NewState)
+void TaskStopSignal::SetState(bool bNewState)
 {
 	StateMutex.lock();
-	State = NewState;
+	bState = bNewState;
 	StateMutex.unlock();
 }
 
 bool TaskStopSignal::GetState() const
 {
 	std::lock_guard<std::mutex> Lock(StateMutex);
-	return State;
+	return bState;
 }

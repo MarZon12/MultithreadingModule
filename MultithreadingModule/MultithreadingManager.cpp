@@ -8,7 +8,7 @@ std::mutex MultithreadingManager::MaxNumOfStoppedThreadsMutex;
 
 
 
-MultithreadingManager::MultithreadingManager() : ThreadsManager(nullptr), NumOfThreads(0), DeltaTime(0.0f), ThreadCompletedTickTasks(false)
+MultithreadingManager::MultithreadingManager() : ThreadsManager(nullptr), NumOfThreads(0), DeltaTime(0.0f), bThreadCompletedTickTasks(false)
 {
 	// Starting Threads Manager
 	ThreadMethodTask<MultithreadingManager>* ThreadsManagerTask = new ThreadMethodTask<MultithreadingManager>(this, &MultithreadingManager::ThreadsManagerExecution);
@@ -53,31 +53,31 @@ void MultithreadingManager::Tick(float DeltaTime)
 	std::vector<AdvancedThread*> ExecutingThreads;
 
 	// Telling all threads to execute Tick tasks
-	std::unique_lock<std::mutex> LockStandartWorkers(StandartWorkersMutex);
-	for (size_t i = 0; i < StandartWorkers.size(); i++)
+	std::unique_lock<std::mutex> LockStandardWorkers(StandardWorkersMutex);
+	for (size_t i = 0; i < StandardWorkers.size(); i++)
 	{
-		StandartWorkers[i]->NotifyTickTaskAvailable();
+		StandardWorkers[i]->NotifyTickTaskAvailable();
 
-		StandartWorkers[i]->SetCanBeDestroyed(false);
-		ExecutingThreads.push_back(StandartWorkers[i]);
+		StandardWorkers[i]->SetCanBeDestroyed(false);
+		ExecutingThreads.push_back(StandardWorkers[i]);
 	}
-	LockStandartWorkers.unlock();
+	LockStandardWorkers.unlock();
 
 	// Waiting for end of execution
 	while (true)
 	{
-		bool Exit = false;
+		bool bExit = false;
 
 		// Sleep until the thread reports the completion of the task, 
 		// wake up every 500 ms and additionally check this
 		std::unique_lock<std::mutex> LockThreadCompletedTickTasks(ThreadCompletedTickTasksMutex);
-		while (!ThreadCompletedTickTasks)
+		while (!bThreadCompletedTickTasks)
 		{
 			ThreadCompletedTickTasksCondition.wait_for(LockThreadCompletedTickTasks, std::chrono::milliseconds(500));
 		}
 
 		// Reset the state for the next thread
-		ThreadCompletedTickTasks = false;
+		bThreadCompletedTickTasks = false;
 		LockThreadCompletedTickTasks.unlock();
 
 
@@ -92,11 +92,11 @@ void MultithreadingManager::Tick(float DeltaTime)
 
 			if (i == ExecutingThreads.size() - 1)
 			{
-				Exit = true;
+				bExit = true;
 			}
 		}
 
-		if (Exit)
+		if (bExit)
 		{
 			for (size_t i = 0; i < ExecutingThreads.size(); i++)
 			{
@@ -110,9 +110,9 @@ void MultithreadingManager::Tick(float DeltaTime)
 
 void MultithreadingManager::StartThreads()
 {
-	std::unique_lock<std::mutex> Lock(StandartWorkersMutex);
+	std::unique_lock<std::mutex> Lock(StandardWorkersMutex);
 
-	if (!StandartWorkers.empty())
+	if (!StandardWorkers.empty())
 	{
 		return;
 	}
@@ -179,30 +179,30 @@ std::vector<ThreadState> MultithreadingManager::GetDedicatedThreadsStates()
 	return States;
 }
 
-void MultithreadingManager::ChangeNumOfRunningThreads(unsigned int NewNumOfStandartThreads)
+void MultithreadingManager::ChangeNumOfRunningThreads(unsigned int NewNumOfStandardThreads)
 {
-	if (NewNumOfStandartThreads == GetNumOfThreads())
+	if (NewNumOfStandardThreads == GetNumOfThreads())
 	{
 		return;
 	}
 
-	if (NewNumOfStandartThreads < GetNumOfThreads())
+	if (NewNumOfStandardThreads < GetNumOfThreads())
 	{
 		// Stopping
-		while (NewNumOfStandartThreads < GetNumOfThreads())
+		while (NewNumOfStandardThreads < GetNumOfThreads())
 		{
 			StopOneThread();
 		}
 	}
 	else
 	{
-		if (NewNumOfStandartThreads > GetMaxNumOfThreads())
+		if (NewNumOfStandardThreads > GetMaxNumOfThreads())
 		{
-			NewNumOfStandartThreads = GetMaxNumOfThreads();
+			NewNumOfStandardThreads = GetMaxNumOfThreads();
 		}
 
 		// Starting
-		while (NewNumOfStandartThreads > GetNumOfThreads())
+		while (NewNumOfStandardThreads > GetNumOfThreads())
 		{
 			StartNewThread();
 		}
@@ -213,12 +213,12 @@ std::vector<ThreadState> MultithreadingManager::GetThreadsStates()
 {
 	std::vector<ThreadState> States;
 
-	StandartWorkersMutex.lock();
-	for (size_t i = 0; i < StandartWorkers.size(); i++)
+	StandardWorkersMutex.lock();
+	for (size_t i = 0; i < StandardWorkers.size(); i++)
 	{
-		States.push_back(StandartWorkers[i]->GetState());
+		States.push_back(StandardWorkers[i]->GetState());
 	}
-	StandartWorkersMutex.unlock();
+	StandardWorkersMutex.unlock();
 
 	return States;
 }
@@ -266,7 +266,7 @@ void MultithreadingManager::AddTask(ThreadTask* Task)
 {
 	if (Task == nullptr)
 	{
-		throw std::exception("MultithreadingManager: Received task is nullptr");
+		return;
 	}
 
 	if (Task->GetExecuteOnDedicatedThread())
@@ -295,7 +295,7 @@ void MultithreadingManager::RemoveTask(ThreadTask* Task)
 {
 	if (Task == nullptr)
 	{
-		throw std::exception("MultithreadingManager: Received nullptr");
+		return;
 	}
 
 	if (Task->GetExecuteOnDedicatedThread())
@@ -375,86 +375,86 @@ void MultithreadingManager::SetTickDeltaTime(float ActualDeltaTime)
 void MultithreadingManager::UpdateNumOfThreads()
 {
 	std::unique_lock<std::mutex> Lock(NumOfThreadsMutex);
-	std::unique_lock<std::mutex> LockStandartWorkers(StandartWorkersMutex);
-	NumOfThreads = StandartWorkers.size();
+	std::unique_lock<std::mutex> LockStandardWorkers(StandardWorkersMutex);
+	NumOfThreads = StandardWorkers.size();
 }
 
 void MultithreadingManager::StopOneThread()
 {
-	bool OneThreadStopped = false;
+	bool bOneThreadStopped = false;
 
-	std::unique_lock<std::mutex> LockStandartWorkers(StandartWorkersMutex);
+	std::unique_lock<std::mutex> LockStandardWorkers(StandardWorkersMutex);
 	
-	if (StandartWorkers.empty())
+	if (StandardWorkers.empty())
 	{
 		return;
 	}
 
-	for (size_t i = 0; i < StandartWorkers.size(); i++)
+	for (size_t i = 0; i < StandardWorkers.size(); i++)
 	{
-		if (StandartWorkers[i]->GetState() == ThreadState::Asleep || StandartWorkers[i]->GetState() == ThreadState::NotReadyToStart || StandartWorkers[i]->GetState() == ThreadState::Stopped)
+		if (StandardWorkers[i]->GetState() == ThreadState::Asleep || StandardWorkers[i]->GetState() == ThreadState::NotReadyToStart || StandardWorkers[i]->GetState() == ThreadState::Stopped)
 		{
-			StandartWorkers[i]->Stop();
+			StandardWorkers[i]->Stop();
 
 			std::lock_guard<std::mutex> LockPendingStopWorkers(PendingStopWorkersMutex);
-			PendingStopWorkers.push_back(StandartWorkers[i]);
+			PendingStopWorkers.push_back(StandardWorkers[i]);
 
-			StandartWorkers.erase(StandartWorkers.begin() + i);
-			OneThreadStopped = true;
+			StandardWorkers.erase(StandardWorkers.begin() + i);
+			bOneThreadStopped = true;
 			break;
 		}
 	}
 
-	if (!OneThreadStopped)
+	if (!bOneThreadStopped)
 	{
-		StandartWorkers.back()->Stop();
+		StandardWorkers.back()->Stop();
 		std::lock_guard<std::mutex> LockPendingStopWorkers(PendingStopWorkersMutex);
-		PendingStopWorkers.push_back(StandartWorkers.back());
-		StandartWorkers.pop_back();
+		PendingStopWorkers.push_back(StandardWorkers.back());
+		StandardWorkers.pop_back();
 	}
 
-	LockStandartWorkers.unlock();
+	LockStandardWorkers.unlock();
 	UpdateNumOfThreads();
 }
 
 void MultithreadingManager::StopOneThreadWithWaiting()
 {
-	std::unique_lock<std::mutex> LockStandartWorkers(StandartWorkersMutex);
+	std::unique_lock<std::mutex> LockStandardWorkers(StandardWorkersMutex);
 
-	if (StandartWorkers.empty())
+	if (StandardWorkers.empty())
 	{
 		return;
 	}
 
 
-	bool OneThreadStopped = false;
+	bool bOneThreadStopped = false;
 
-	for (size_t i = 0; i < StandartWorkers.size(); i++)
+	for (size_t i = 0; i < StandardWorkers.size(); i++)
 	{
-		if (StandartWorkers[i]->GetState() == ThreadState::Asleep || StandartWorkers[i]->GetState() == ThreadState::NotReadyToStart || StandartWorkers[i]->GetState() == ThreadState::Stopped)
+		if (StandardWorkers[i]->GetState() == ThreadState::Asleep || StandardWorkers[i]->GetState() == ThreadState::NotReadyToStart || StandardWorkers[i]->GetState() == ThreadState::Stopped)
 		{
-			StandartWorkers[i]->StopWithWaiting();
+			StandardWorkers[i]->StopWithWaiting();
 
 			std::unique_lock<std::mutex> LockPendingStopWorkers(PendingStopWorkersMutex);
-			PendingStopWorkers.push_back(StandartWorkers[i]);
+			PendingStopWorkers.push_back(StandardWorkers[i]);
 
-			StandartWorkers.erase(StandartWorkers.begin() + i);
-			OneThreadStopped = true;
+			StandardWorkers.erase(StandardWorkers.begin() + i);
+			bOneThreadStopped = true;
 			break;
 		}
 	}
 
-	if (!OneThreadStopped)
+	if (!bOneThreadStopped)
 	{
-		StandartWorkers.back()->StopWithWaiting();
+		StandardWorkers.back()->StopWithWaiting();
 
 		std::unique_lock<std::mutex> LockPendingStopWorkers(PendingStopWorkersMutex);
-		PendingStopWorkers.push_back(StandartWorkers.back());
+		PendingStopWorkers.push_back(StandardWorkers.back());
 
-		StandartWorkers.pop_back();
+		StandardWorkers.pop_back();
 	}
 
-	LockStandartWorkers.unlock();
+	LockStandardWorkers.unlock();
 	UpdateNumOfThreads();
 }
 
@@ -462,26 +462,26 @@ void MultithreadingManager::StartNewThread()
 {
 	AdvancedThread* StartedThread = nullptr;
 
-	std::unique_lock<std::mutex> LockStandartWorkers(StandartWorkersMutex);
+	std::unique_lock<std::mutex> LockStandardWorkers(StandardWorkersMutex);
 
-	if (StandartWorkers.size() >= GetMaxNumOfThreads())
+	if (StandardWorkers.size() >= GetMaxNumOfThreads())
 	{
 		return;
 	}
 
 	if ((StartedThread = GetStoppedThread()) == nullptr)
 	{
-		StartedThread = new AdvancedThread;
+		StartedThread = new AdvancedThread();
 	}
 
 	StartedThread->Initialize(&OnceTasks, &OnceTasksMutex,
 		&TickTasksForExecution, &TickTasksForExecutionMutex,
-		&ThreadCompletedTickTasks, &ThreadCompletedTickTasksMutex, &ThreadCompletedTickTasksCondition,
+		&bThreadCompletedTickTasks, &ThreadCompletedTickTasksMutex, &ThreadCompletedTickTasksCondition,
 		&DeltaTime, &DeltaTimeMutex);
 	StartedThread->Start();
-	StandartWorkers.push_back(StartedThread);
+	StandardWorkers.push_back(StartedThread);
 
-	LockStandartWorkers.unlock();
+	LockStandardWorkers.unlock();
 
 	UpdateNumOfThreads();
 }
@@ -536,7 +536,7 @@ void MultithreadingManager::ThreadsManagerExecution(const TaskStopSignal& StopSi
 {
 	while (true)
 	{
-		bool ManagerCanFinishWork = true;
+		bool bManagerCanFinishWork = true;
 
 		// Dedicated threads: move to the list of pending stop those that have completed their work
 		std::unique_lock<std::mutex> LockDedicatedWorkers(DedicatedWorkersMutex);
@@ -552,22 +552,22 @@ void MultithreadingManager::ThreadsManagerExecution(const TaskStopSignal& StopSi
 		}
 		LockDedicatedWorkers.unlock();
 
-		// Standart threads: move to the list of pending stop those that have completed their work
-		bool NeedToUpdateNumOfThreads = false;
-		std::unique_lock<std::mutex> LockStandartWorkers(StandartWorkersMutex);
-		for (size_t i = 0; i < StandartWorkers.size(); i++)
+		// Standard threads: move to the list of pending stop those that have completed their work
+		bool bNeedToUpdateNumOfThreads = false;
+		std::unique_lock<std::mutex> LockStandardWorkers(StandardWorkersMutex);
+		for (size_t i = 0; i < StandardWorkers.size(); i++)
 		{
-			if (StandartWorkers[i]->GetState() == ThreadState::Stopped || StandartWorkers[i]->GetState() == ThreadState::NotReadyToStart)
+			if (StandardWorkers[i]->GetState() == ThreadState::Stopped || StandardWorkers[i]->GetState() == ThreadState::NotReadyToStart)
 			{
 				std::lock_guard<std::mutex> LockPendingStopWorkers(PendingStopWorkersMutex);
-				PendingStopWorkers.push_back(StandartWorkers[i]);
+				PendingStopWorkers.push_back(StandardWorkers[i]);
 
-				StandartWorkers.erase(StandartWorkers.begin() + i);
-				NeedToUpdateNumOfThreads = true;
+				StandardWorkers.erase(StandardWorkers.begin() + i);
+				bNeedToUpdateNumOfThreads = true;
 			}
 		}
-		LockStandartWorkers.unlock();
-		if (NeedToUpdateNumOfThreads)
+		LockStandardWorkers.unlock();
+		if (bNeedToUpdateNumOfThreads)
 		{
 			UpdateNumOfThreads();
 		}
@@ -614,10 +614,10 @@ void MultithreadingManager::ThreadsManagerExecution(const TaskStopSignal& StopSi
 		// If there are still running, stopping, or stopped threads, then shutting down the manager is unacceptable
 		if (GetNumOfThreads() != 0 || GetNumOfDedicatedThreads() != 0 || GetNumOfPendingStopThreads() != 0 || GetNumOfStoppedThreads() != 0)
 		{
-			ManagerCanFinishWork = false;
+			bManagerCanFinishWork = false;
 		}
 
-		if (StopSignal.GetState() && ManagerCanFinishWork)
+		if (StopSignal.GetState() && bManagerCanFinishWork)
 		{
 			break;
 		}

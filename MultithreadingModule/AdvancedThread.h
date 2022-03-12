@@ -14,13 +14,13 @@ private:
 	std::thread* ControlledThread;
 	std::mutex ControlledThreadMutex;
 
-	bool CanBeDestroyed;
+	bool bCanBeDestroyed;
 	std::mutex CanBeDestroyedMutex;
 
-	bool MustStop;
+	bool bMustStop;
 	std::mutex MustStopMutex;
 
-	bool MustSleep;
+	bool bMustSleep;
 	std::mutex MustSleepMutex;
 	std::condition_variable MustSleepCondition;
 
@@ -30,16 +30,16 @@ private:
 
 	// Dedicated type
 
-	bool IsDedicatedThread;
+	bool bIsDedicatedThread;
 	std::mutex IsDedicatedThreadMutex;
 
 	ThreadTask* TaskForDedicatedExecution;
 	std::mutex TaskForDedicatedExecutionMutex;
 
 
-	// Standart type
+	// Standard type
 
-	bool ThreadCompletedTick;
+	bool bThreadCompletedTick;
 	std::mutex ThreadCompletedTickMutex;
 
 	static unsigned int MaxTickTasksPerIteration;
@@ -49,7 +49,7 @@ private:
 	static std::mutex MaxOnceTasksPerIterationMutex;
 
 
-	// Standart type: External Data
+	// Standard type: External Data
 
 	std::queue<ThreadTask*>* OnceTasksRef;
 	std::mutex* OnceTasksMutexRef;
@@ -57,7 +57,7 @@ private:
 	std::queue<ThreadTask*>* TickTasksRef;
 	std::mutex* TickTasksMutexRef;
 
-	bool* ThreadCompletedTickTasksRef;
+	bool* bThreadCompletedTickTasksRef;
 	std::mutex* ThreadCompletedTickTasksMutexRef;
 	std::condition_variable* ThreadCompletedTickTasksConditionRef;
 
@@ -81,7 +81,7 @@ public:
 	void Initialize(
 		std::queue<ThreadTask*>* OnceTasks, std::mutex* OnceTasksMutex,
 		std::queue<ThreadTask*>* TickTasks, std::mutex* TickTasksMutex,
-		bool* ThreadCompletedTickTasks, std::mutex* ThreadCompletedTickTasksMutex, std::condition_variable* ThreadCompletedTickTasksCondition,
+		bool* bThreadCompletedTickTasks, std::mutex* ThreadCompletedTickTasksMutex, std::condition_variable* ThreadCompletedTickTasksCondition,
 		float* DeltaTick, std::mutex* DeltaTickMutex);
 	// Initialize as dedicated thread
 	// @param Task - pointer to a task for dedicated execution
@@ -109,12 +109,12 @@ public:
 
 	// Marks the thread as impossible/possible for destruction (does not affect anything, only describes the state)
 	// @param NewState - new state value
-	void SetCanBeDestroyed(bool NewState);
+	void SetCanBeDestroyed(bool bNewState);
 	// Returns the state of the possibility of destroying the thread
 	bool GetCanBeDestroyed();
 
 
-	// Standart type
+	// Standard type
 
 	// Returns true if the thread completed Tick tasks
 	bool GetThreadCompletedTick();
@@ -139,7 +139,7 @@ private:
 
 	void SetState(ThreadState NewState);
 
-	void SetIsDedicated(bool NewState);
+	void SetIsDedicated(bool bNewState);
 
 	bool GetMustStop();
 	bool GetMustSleep();
@@ -151,11 +151,11 @@ private:
 	void SleepExecution();
 	
 
-	// Standart type
+	// Standard type
 
 	void Execute();
 
-	void SetThreadCompletedTick(bool NewState);
+	void SetThreadCompletedTick(bool bNewState);
 
 	// Works with an external object
 	bool GetNeedToCompleteOnceTasks();

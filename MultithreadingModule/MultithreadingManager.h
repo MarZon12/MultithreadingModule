@@ -14,9 +14,9 @@ private:
 	AdvancedThread* ThreadsManager;
 
 
-	// Standart threads (for Once and Tick tasks)
-	std::vector<AdvancedThread*> StandartWorkers;
-	std::mutex StandartWorkersMutex;
+	// Standard threads (for Once and Tick tasks)
+	std::vector<AdvancedThread*> StandardWorkers;
+	std::mutex StandardWorkersMutex;
 
 	// Number of running standart threads
 	unsigned int NumOfThreads;
@@ -59,7 +59,7 @@ private:
 	float DeltaTime;
 	std::mutex DeltaTimeMutex;
 
-	bool ThreadCompletedTickTasks;
+	bool bThreadCompletedTickTasks;
 	std::mutex ThreadCompletedTickTasksMutex;
 	std::condition_variable ThreadCompletedTickTasksCondition;
 
@@ -87,8 +87,8 @@ public:
 
 	// Changes the number of running standard threads, stopping or starting them, bringing their number to the given number 
 	// Will not exceed the maximum number of standart threads limit
-	// @param NewNumOfStandartThreads - Updated number of working standart threads
-	void ChangeNumOfRunningThreads(unsigned int NewNumOfStandartThreads);
+	// @param NewNumOfStandardThreads - Updated number of working standart threads
+	void ChangeNumOfRunningThreads(unsigned int NewNumOfStandardThreads);
 
 	// Returns the states of standard threads
 	std::vector<ThreadState> GetThreadsStates();

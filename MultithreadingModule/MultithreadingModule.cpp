@@ -24,6 +24,29 @@ unsigned int MultithreadingModule::GetRefCounterValue()
 	return MultithreadingManagerRefCounter;
 }
 
+MultithreadingModule::MultithreadingModule()
+{
+	IncreaseRefCounter();
+
+	std::lock_guard<std::mutex> Lock(MultithreadingManagerRefMutex);
+	if (MultithreadingManagerRef == nullptr)
+	{
+		MultithreadingManagerRef = new MultithreadingManager();
+	}
+}
+
+MultithreadingModule::~MultithreadingModule()
+{
+	DecreaseRefCounter();
+
+	std::lock_guard<std::mutex> Lock(MultithreadingManagerRefMutex);
+	if (GetRefCounterValue() == 0)
+	{
+		delete MultithreadingManagerRef;
+		MultithreadingManagerRef = nullptr;
+	}
+}
+
 void MultithreadingModule::Tick(float DeltaTime)
 {
 	MultithreadingManagerRef->Tick(DeltaTime);
@@ -39,9 +62,9 @@ void MultithreadingModule::StopThreads()
 	MultithreadingManagerRef->StopThreads();
 }
 
-void MultithreadingModule::ChangeNumOfRunningThreads(unsigned int NewNumOfStandartThreads)
+void MultithreadingModule::ChangeNumOfRunningThreads(unsigned int NewNumOfStandardThreads)
 {
-	MultithreadingManagerRef->ChangeNumOfRunningThreads(NewNumOfStandartThreads);
+	MultithreadingManagerRef->ChangeNumOfRunningThreads(NewNumOfStandardThreads);
 }
 
 std::vector<ThreadState> MultithreadingModule::GetThreadsStates()

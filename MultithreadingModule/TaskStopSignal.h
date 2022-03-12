@@ -4,13 +4,13 @@
 class TaskStopSignal
 {
 private:
-	bool State;
+	bool bState;
 	mutable std::mutex StateMutex;
 
 public:
 	TaskStopSignal();
 
-	void SetState(bool NewState);
+	void SetState(bool bNewState);
 	bool GetState() const;
 };
 
